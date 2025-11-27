@@ -1,0 +1,123 @@
+## Helm chart values for admin-ms in the dev environment
+###############################################
+# Admin Microservice Helm Chart - Dev Environment Values  ##
+helmChart:
+  path: backend/admin ms/
+  url: https://github.com/DATA-NRKTX/tpo-ui-helmchart/
+  revision: main
+
+name: dev-admin-ms
+environment: dev
+
+service:
+  name: dev-admin-svc
+  type: ClusterIP
+  port: 8000   #checj with team 
+
+deployment:
+  name: dev-admin-deployment
+  label: dev-admin
+
+
+externalSecret:
+  enabled: true
+  name: be-app-secrets
+  refreshInterval: 1h
+  secrets:
+    # Database details for dev env
+    - secretKey: DB_NAME
+      remoteRef: PG-DATABASE-DEV
+    - secretKey: DB_HOST
+      remoteRef: PG-HOST-DEV
+    - secretKey: DB_USER
+      remoteRef: PG-USER-DEV
+    - secretKey: DB_PORT
+      remoteRef: PG-PORT-DEV
+    - secretKey: AZURE_CLIENT_ID
+      remoteRef: AZURE-CLIENT-ID-DEV
+    - secretKey: AZURE_CLIENT_SECRET
+      remoteRef: AZURE-CLIENT-SECRET-DEV
+    - secretKey: PORT
+      remoteRef: PORT-DEV
+    - secretKey: AZURE_TENANT_ID
+      remoteRef: AZURE-TENANT-ID
+    - secretKey: DB_SCHEMA
+      remoteRef: DB-SCHEMA-DEV   
+
+    
+    
+    # Storage account details
+    - secretKey: DEFAULT_ENDPOINT_PROTOCOL
+      remoteRef: DEFAULT-ENDPOINT-PROTOCOL
+    - secretKey: ACCOUNT_NAME
+      remoteRef: STORAGE-ACCOUNT-NAME
+    - secretKey: ACCOUNT_KEY
+      remoteRef: STORAGE-ACCOUNT-KEY
+    - secretKey: ENDPOINT_SUFFIX
+      remoteRef: STORAGE-ENDPOINT-SUFFIX
+    - secretKey: CONTAINER_NAME
+      remoteRef: STORAGE-CONTAINER-NAME
+
+    # Misc
+    - secretKey: HOST_URL
+      remoteRef: HOST-URL
+
+
+
+
+
+secrets:
+  useKeyVault: true
+  k8sSecretName: admin-ms-kv-secret
+  keyVault:
+    vaultName: "<AZURE_KEYVAULT_NAME>"
+    tenantId: "<TENANT_ID>"
+    objects:
+      - objectName: admin-db-credentials
+        objectType: secret
+        objectAlias: db-creds
+
+replicaCount: 1   # chech with team    
+app:
+  image: myregistry.azurecr.io/admin-ms
+  secretMountPath: /mnt/secrets  # where all secrets will appear as files
+
+imagePullSecrets:
+  name: regcred
+  externalSecret:
+  dockerconfigjson: <BASE64_ENCODED_DOCKERCONFIGJSON>  
+
+resources:
+  enabled: true
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+probes:
+  livenessPath: /healthz
+  readinessPath: /ready
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 2
+
+autoscaling:
+  enabled: true
+  namee:  dev-admin-hpa
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 80
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80 
